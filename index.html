@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Flower and The Wind</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    h1, h2 {
+      margin: 10px 0;
+    }
+    button {
+      padding: 15px 30px;
+      margin: 20px;
+      background-color: #34495e;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      border-radius: 6px;
+      width: 200px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(5, 80px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .cell {
+      width: 80px;
+      height: 80px;
+      background: #34495e;
+      border: 1px solid #ccc;
+      font-size: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .cell.flower {
+      background-color: #ffc0cb;
+    }
+    .cell.seed {
+      background-color: #add8e6;
+    }
+    .disabled {
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    #directions button {
+      margin: 5px;
+      padding: 12px;
+      background-color: #34495e;
+      color: white;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 6px;
+    }
+    #directions button:disabled {
+      background-color: #7f8c8d;
+      cursor: not-allowed;
+    }
+    
+    /* Adjusting text size and layout on game page */
+    #turnDisplay {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    #status {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+
+    #gamePage {
+      max-width: 800px;
+      margin: 0 auto;
+      overflow-y: auto;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Starting Page -->
+  <div id="startPage">
+    <h1>The Flower and The Wind</h1>
+    <h2>Choose Game Mode</h2>
+    <button onclick="showDifficultyPage()">Single Player</button>
+    <button onclick="showDifficultyPage()">Multiplayer</button>
+  </div>
+
+  <!-- Difficulty Page -->
+  <div id="difficultyPage" style="display:none;">
+    <h1>Choose Difficulty</h1>
+    <button onclick="startGame('easy')">Easy</button>
+    <button onclick="startGame('medium')">Medium</button>
+    <button onclick="startGame('hard')">Hard</button>
+  </div>
+
+  <!-- Game Page -->
+  <div id="gamePage" style="display:none;">
+    <h1>The Flower and The Wind</h1>
+    <p id="turnDisplay">Flower's Turn: Click a square to plant a flower.</p>
+    <div id="board"></div>
+    <div id="directions" class="disabled">
+      <p>Wind's Turn: Choose a direction to blow.</p>
+      <button data-dir="N">N</button>
+      <button data-dir="NE">NE</button>
+      <button data-dir="E">E</button>
+      <button data-dir="SE">SE</button>
+      <button data-dir="S">S</button>
+      <button data-dir="SW">SW</button>
+      <button data-dir="W">W</button>
+      <button data-dir="NW">NW</button>
+    </div>
+    <p id="status"></p>
+    <button onclick="goBackToStart()">Back to Start</button>
+  </div>
+
+  <script>
+    const size = 5;
+    const board = document.getElementById("board");
+    const turnDisplay = document.getElementById("turnDisplay");
+    const directionsDiv = document.getElementById("directions");
+    const statusText = document.getElementById("status");
+
+    let grid, flowerTurn, windTurns, usedDirections;
+
+    const directions = {
+      N: [-1, 0], NE: [-1, 1], E: [0, 1], SE: [1, 1],
+      S: [1, 0], SW: [1, -1], W: [0, -1], NW: [-1, -1]
+    };
+
+    // Starting Page
+    function showDifficultyPage() {
+      document.getElementById('startPage').style.display = 'none';
+      document.getElementById('difficultyPage').style.display = 'block';
+    }
+
+    // Difficulty Page
+    function startGame(difficulty) {
+      document.getElementById('difficultyPage').style.display = 'none';
+      document.getElementById('gamePage').style.display = 'block';
+      console.log(`Starting game with difficulty: ${difficulty}`);
+      resetGame();
+      createBoard();
+    }
+
+    // Game Page
+    function resetGame() {
+      grid = Array(size).fill(null).map(() => Array(size).fill("")); // initialize grid
+      flowerTurn = true;  // Flower starts the game
+      windTurns = 0;      // Wind's turns counter
+      usedDirections = new Set(); // to track used directions
+      statusText.textContent = ''; // Clear status text
+    }
+
+    function createBoard() {
+      board.innerHTML = "";  // Clear the board
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.textContent = grid[r][c] === "F" ? "🌸" : (grid[r][c] === "S" ? "•" : "");
+          if (!grid[r][c] && flowerTurn) {
+            cell.addEventListener("click", () => placeFlower(r, c));  // Flower places
+          }
+          board.appendChild(cell);  // Add cell to the board
+        }
+      }
+    }
+
+    function placeFlower(r, c) {
+      if (!grid[r][c]) {  // If cell is empty, place a flower
+        grid[r][c] = "F";
+        flowerTurn = false; // Switch turn to wind
+        updateGame();
+      }
+    }
+
+    function placeSeeds(dir) {
+      const [dr, dc] = directions[dir];
+      let newSeeds = [];
+
+      // Look for flowers and spread seeds in the specified direction
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (grid[r][c] === "F") {
+            let nr = r + dr;
+            let nc = c + dc;
+            if (nr >= 0 && nr < size && nc >= 0 && nc < size && grid[nr][nc] === "") {
+              newSeeds.push([nr, nc]);
+            }
+          }
+        }
+      }
+
+      newSeeds.forEach(([r, c]) => grid[r][c] = "S");  // Place seeds
+      windTurns++;  // Increment wind's turn
+      usedDirections.add(dir);  // Mark direction as used
+      flowerTurn = true;  // Switch back to flower
+      updateGame();
+    }
+
+    function updateGame() {
+      createBoard();
+      if (flowerTurn) {
+        turnDisplay.textContent = "Flower's Turn: Click a square to plant a flower.";
+        directionsDiv.classList.add("disabled");
+      } else {
+        turnDisplay.textContent = "Wind's Turn: Choose a direction to blow.";
+        directionsDiv.classList.remove("disabled");
+        [...directionsDiv.querySelectorAll("button")].forEach(btn => {
+          btn.disabled = usedDirections.has(btn.dataset.dir);
+        });
+      }
+
+      checkGameOver();
+    }
+
+    function checkGameOver() {
+      const flat = grid.flat();
+      if (!flat.includes("")) {
+        statusText.textContent = "Flower wins! The board is full.";
+        endGame();
+      } else if (windTurns >= 7) {
+        statusText.textContent = "Wind wins! The board is not full after 7 turns.";
+        endGame();
+      }
+    }
+
+    function endGame() {
+      flowerTurn = false;
+      directionsDiv.classList.add("disabled");
+      createBoard();
+    }
+
+    directionsDiv.addEventListener("click", e => {
+      if (e.target.tagName === "BUTTON") {
+        placeSeeds(e.target.dataset.dir);
+      }
+    });
+
+    // Go back to start
+    function goBackToStart() {
+      document.getElementById('gamePage').style.display = 'none';
+      document.getElementById('startPage').style.display = 'block';
+      resetGame();  // Reset the game state when going back to start
+    }
+  </script>
+</body>
+</html>
