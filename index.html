@@ -234,7 +234,6 @@
           setTimeout(() => aiWindMove(currentDifficulty), 500);
         }
       }
-
       checkGameOver();
     }
 
@@ -289,8 +288,8 @@
     }
 
     function mlBestDirection(availableDirs) {
-      // Placeholder ML decision
-      return availableDirs.sort((a, b) => scoreDirection(b) - scoreDirection(a))[0];
+      // Placeholder for actual ML logic
+      return availableDirs[Math.floor(Math.random() * availableDirs.length)];
     }
 
     directionsDiv.addEventListener("click", e => {
